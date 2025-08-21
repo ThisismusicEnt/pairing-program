@@ -60,7 +60,7 @@
 
             <!-- Step Indicator -->
             <div class="flex justify-center items-center mb-8">
-                <div id="step-indicator-1" class="flex items-center"><span class="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold">1</span><span class="ml-2 text-gray-700 font-medium hidden sm:inline">Upload</span></div>
+                <div id="step-indicator-1" class="flex items-center"><span class="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold">1</span><span class="ml-2 text-gray-700 font-medium hidden sm:inline">Input</span></div>
                 <div class="flex-1 h-px bg-gray-300 mx-2"></div>
                 <div id="step-indicator-2" class="flex items-center opacity-50"><span class="w-8 h-8 rounded-full bg-gray-400 text-white flex items-center justify-center font-bold">2</span><span class="ml-2 text-gray-500 font-medium hidden sm:inline">Trainers</span></div>
                 <div class="flex-1 h-px bg-gray-300 mx-2"></div>
@@ -73,18 +73,37 @@
 
             <!-- Guide Content -->
             <div id="guide-content">
-                <!-- Step 1: Upload Excel File -->
+                <!-- Step 1: Choose Input Method -->
                 <div id="step-1" class="guide-step">
-                    <h2 class="text-2xl font-semibold text-gray-700 mb-4">Step 1: Upload Trainee Excel Sheet</h2>
-                    <p class="text-gray-600 mb-6">Upload an Excel file (.xlsx, .xls, .csv). It must contain columns for <code class="bg-gray-200 p-1 rounded">'First'</code> name, <code class="bg-gray-200 p-1 rounded">'Last'</code> name, and <code class="bg-gray-200 p-1 rounded">'MARKET'</code>.</p>
-                    <div class="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
-                        <input type="file" id="excel-file" class="hidden" accept=".xlsx, .xls, .csv">
-                        <label for="excel-file" class="cursor-pointer text-blue-600 font-semibold">Click here to select your file</label>
-                        <p id="file-name" class="mt-2 text-gray-500"></p>
+                    <h2 class="text-2xl font-semibold text-gray-700 mb-4 text-center">How would you like to add trainees?</h2>
+                    <div class="flex justify-center items-center gap-8 mt-8">
+                        <button id="choose-upload-btn" class="bg-blue-600 text-white font-bold py-3 px-8 rounded-lg hover:bg-blue-700 transition-colors text-lg">Upload Spreadsheet</button>
+                        <button id="choose-manual-btn" class="bg-gray-600 text-white font-bold py-3 px-8 rounded-lg hover:bg-gray-700 transition-colors text-lg">Enter Manually</button>
                     </div>
-                    <div id="data-preview" class="mt-6 hidden max-h-64 overflow-y-auto">
-                        <h3 class="font-semibold mb-2">Data Preview:</h3>
-                        <table class="min-w-full bg-white border"><thead id="preview-header" class="bg-gray-200"></thead><tbody id="preview-body"></tbody></table>
+                </div>
+
+                <!-- Step 1b: Upload or Manual Entry -->
+                <div id="step-1-data" class="guide-step hidden">
+                    <!-- Upload Section -->
+                    <div id="upload-section" class="hidden">
+                        <h2 class="text-2xl font-semibold text-gray-700 mb-4">Upload Trainee Excel Sheet</h2>
+                        <p class="text-gray-600 mb-6">Upload an Excel file (.xlsx, .xls, .csv). It must contain columns for <code class="bg-gray-200 p-1 rounded">'First'</code> name, <code class="bg-gray-200 p-1 rounded">'Last'</code> name, and <code class="bg-gray-200 p-1 rounded">'MARKET'</code>.</p>
+                        <div class="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
+                            <input type="file" id="excel-file" class="hidden" accept=".xlsx, .xls, .csv">
+                            <label for="excel-file" class="cursor-pointer text-blue-600 font-semibold">Click here to select your file</label>
+                            <p id="file-name" class="mt-2 text-gray-500"></p>
+                        </div>
+                        <div id="data-preview" class="mt-6 hidden max-h-64 overflow-y-auto">
+                            <h3 class="font-semibold mb-2">Data Preview:</h3>
+                            <table class="min-w-full bg-white border"><thead id="preview-header" class="bg-gray-200"></thead><tbody id="preview-body"></tbody></table>
+                        </div>
+                    </div>
+                    <!-- Manual Entry Section -->
+                    <div id="manual-section" class="hidden">
+                        <h2 class="text-2xl font-semibold text-gray-700 mb-4">Manually Enter Trainees</h2>
+                        <p class="text-gray-600 mb-6">Add your trainees below. You can add as many as you need.</p>
+                        <div id="manual-trainees-list" class="space-y-4"></div>
+                        <button id="add-manual-trainee-btn" class="mt-6 bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors">+ Add Another Trainee</button>
                     </div>
                 </div>
 
@@ -146,7 +165,7 @@
                 <button id="clear-data-btn" class="text-sm text-red-600 hover:underline">Clear Saved Data</button>
                 <div>
                     <button id="back-btn" class="bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-lg hover:bg-gray-400 transition-colors hidden">Back</button>
-                    <button id="next-btn" class="bg-blue-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-blue-700 transition-colors ml-2">Next</button>
+                    <button id="next-btn" class="bg-blue-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-blue-700 transition-colors ml-2 hidden">Next</button>
                 </div>
             </div>
         </div>
@@ -155,6 +174,7 @@
     <script>
         // --- STATE MANAGEMENT ---
         let currentStep = 1;
+        let inputMethod = ''; // 'upload' or 'manual'
         let traineeData = [];
         let trainers = [];
         let pairings = [];
@@ -169,6 +189,10 @@
         const copyPostBtn = document.getElementById('copy-post-btn');
         const clearDataBtn = document.getElementById('clear-data-btn');
         const downloadIcsBtn = document.getElementById('download-ics-btn');
+        const chooseUploadBtn = document.getElementById('choose-upload-btn');
+        const chooseManualBtn = document.getElementById('choose-manual-btn');
+        const addManualTraineeBtn = document.getElementById('add-manual-trainee-btn');
+
 
         // --- DATA PERSISTENCE (localStorage) ---
         const saveData = () => {
@@ -194,16 +218,35 @@
         // --- GUIDE NAVIGATION LOGIC ---
         const updateGuideUI = () => {
             document.querySelectorAll('.guide-step').forEach(step => step.classList.add('hidden'));
-            document.getElementById(`step-${currentStep}`).classList.remove('hidden');
+            
+            // Special handling for step 1 which has two sub-views
+            if (currentStep === 1) {
+                if (inputMethod === '') {
+                    document.getElementById('step-1').classList.remove('hidden');
+                } else {
+                    document.getElementById('step-1-data').classList.remove('hidden');
+                    if (inputMethod === 'upload') {
+                        document.getElementById('upload-section').classList.remove('hidden');
+                        document.getElementById('manual-section').classList.add('hidden');
+                    } else {
+                        document.getElementById('upload-section').classList.add('hidden');
+                        document.getElementById('manual-section').classList.remove('hidden');
+                    }
+                }
+            } else {
+                 document.getElementById(`step-${currentStep}`).classList.remove('hidden');
+            }
 
+            // Update indicators
             for (let i = 1; i <= 5; i++) {
                 const indicator = document.getElementById(`step-indicator-${i}`);
                 const span = indicator.querySelector('span:first-child');
-                if (i < currentStep) {
+                const stepToShow = (currentStep > 1) ? currentStep -1 : 1;
+                if (i < stepToShow) {
                     span.classList.remove('bg-gray-400', 'bg-blue-600');
                     span.classList.add('bg-green-600');
                     indicator.classList.remove('opacity-50');
-                } else if (i === currentStep) {
+                } else if (i === stepToShow) {
                     span.classList.remove('bg-gray-400', 'bg-green-600');
                     span.classList.add('bg-blue-600');
                     indicator.classList.remove('opacity-50');
@@ -213,18 +256,25 @@
                     indicator.classList.add('opacity-50');
                 }
             }
-
+            
+            nextBtn.classList.toggle('hidden', currentStep === 0 || inputMethod === '');
             backBtn.classList.toggle('hidden', currentStep === 1);
             nextBtn.classList.toggle('hidden', currentStep === 5);
             nextBtn.textContent = (currentStep === 4) ? 'Generate Post' : 'Next';
         };
 
         nextBtn.addEventListener('click', () => {
-            if (currentStep < 5) {
-                if (currentStep === 1 && traineeData.length === 0) { 
-                    alert('Please upload a valid Excel file first.'); 
+            if (currentStep === 1) { // After data input
+                if (inputMethod === 'manual') {
+                    saveManualTrainees();
+                }
+                if (traineeData.length === 0) {
+                    alert('Please add at least one trainee.');
                     return;
                 }
+            }
+
+            if (currentStep < 5) {
                 if (currentStep === 2) { 
                     saveTrainers(); 
                     if (trainers.length === 0) { 
@@ -242,10 +292,31 @@
         });
 
         backBtn.addEventListener('click', () => {
-            if (currentStep > 1) { currentStep--; updateGuideUI(); }
+            if (currentStep > 1) {
+                 currentStep--;
+                 if (currentStep === 1) {
+                     // If we go back to step 1, reset the input choice
+                     inputMethod = '';
+                     traineeData = [];
+                 }
+                 updateGuideUI();
+            }
+        });
+        
+        // --- STEP 1: CHOOSE METHOD ---
+        chooseUploadBtn.addEventListener('click', () => {
+            inputMethod = 'upload';
+            updateGuideUI();
         });
 
-        // --- STEP 1: FILE UPLOAD ---
+        chooseManualBtn.addEventListener('click', () => {
+            inputMethod = 'manual';
+            populateManualTraineeUI();
+            updateGuideUI();
+        });
+
+        // --- STEP 1b: DATA INPUT ---
+        // Upload Logic
         fileInput.addEventListener('change', (event) => {
             const file = event.target.files[0];
             if (!file) return;
@@ -256,7 +327,7 @@
                     const data = new Uint8Array(e.target.result);
                     const workbook = XLSX.read(data, { type: 'array' });
                     const ws = workbook.Sheets[workbook.SheetNames[0]];
-                    const jsonDataRaw = XLSX.utils.sheet_to_json(ws, { blankrows: false });
+                    const jsonDataRaw = XLSX.utils.sheet_to_json(ws);
                     
                     if (!jsonDataRaw || jsonDataRaw.length === 0) {
                         throw new Error('The Excel sheet is empty or contains no data rows below the headers.');
@@ -268,20 +339,24 @@
                     const marketKey = headers.find(h => h.trim().toLowerCase() === 'market');
 
                     if (firstKey && lastKey && marketKey) {
-                        traineeData = jsonDataRaw.map(row => ({ 
-                            name: `${row[firstKey]} ${row[lastKey]}`, 
-                            region: row[marketKey],
-                            id: Math.random().toString(36).substr(2, 9) 
-                        })).filter(t => t.name && t.name.trim() !== '' && t.region); 
+                        traineeData = jsonDataRaw
+                            .filter(row => row[firstKey] && row[lastKey] && row[marketKey])
+                            .map(row => ({ 
+                                name: `${row[firstKey]} ${row[lastKey]}`.trim(), 
+                                region: row[marketKey],
+                                id: Math.random().toString(36).substr(2, 9) 
+                            }))
+                            .filter(t => t.name && t.region);
                         
                         if (traineeData.length === 0) {
-                            throw new Error('No valid trainee names found. Please check that the "First", "Last", and "MARKET" columns are populated.');
+                            throw new Error('No valid trainee data found. Please check that the "First", "Last", and "MARKET" columns are populated with data.');
                         }
 
                         displayDataPreview(traineeData);
                         extractUniqueRegions();
                         populateTrainersUI();
                         populatePairingUI();
+                        nextBtn.classList.remove('hidden'); // Show next button after successful upload
                     } else {
                         throw new Error('Columns "First", "Last", and "MARKET" not found. Please check the column headers in your file.');
                     }
@@ -295,6 +370,48 @@
             };
             reader.readAsArrayBuffer(file);
         });
+
+        // Manual Entry Logic
+        const createManualTraineeInput = () => {
+            const div = document.createElement('div');
+            div.className = 'manual-trainee-entry flex items-center space-x-4 p-4 bg-gray-50 rounded-lg';
+            div.innerHTML = `
+                <div class="flex-1"><label class="block text-sm font-medium text-gray-700">First Name</label><input type="text" class="mt-1 trainee-first-name w-full p-2 border border-gray-300 rounded-lg" placeholder="e.g., John"></div>
+                <div class="flex-1"><label class="block text-sm font-medium text-gray-700">Last Name</label><input type="text" class="mt-1 trainee-last-name w-full p-2 border border-gray-300 rounded-lg" placeholder="e.g., Doe"></div>
+                <div class="flex-1"><label class="block text-sm font-medium text-gray-700">Market</label><input type="text" class="mt-1 trainee-market w-full p-2 border border-gray-300 rounded-lg" placeholder="e.g., SEPA"></div>
+                <button class="remove-manual-trainee-btn bg-red-500 text-white p-2 rounded-full hover:bg-red-600 self-end mb-1"><svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm4 0a1 1 0 012 0v6a1 1 0 11-2 0V8z" clip-rule="evenodd" /></svg></button>`;
+            div.querySelector('.remove-manual-trainee-btn').addEventListener('click', () => div.remove());
+            return div;
+        };
+        
+        const populateManualTraineeUI = () => {
+            const container = document.getElementById('manual-trainees-list');
+            container.innerHTML = '';
+            container.appendChild(createManualTraineeInput());
+        };
+
+        addManualTraineeBtn.addEventListener('click', () => {
+            document.getElementById('manual-trainees-list').appendChild(createManualTraineeInput());
+        });
+
+        const saveManualTrainees = () => {
+            traineeData = [];
+            document.querySelectorAll('.manual-trainee-entry').forEach(entry => {
+                const firstName = entry.querySelector('.trainee-first-name').value.trim();
+                const lastName = entry.querySelector('.trainee-last-name').value.trim();
+                const market = entry.querySelector('.trainee-market').value.trim();
+                if (firstName && lastName && market) {
+                    traineeData.push({
+                        name: `${firstName} ${lastName}`,
+                        region: market,
+                        id: Math.random().toString(36).substr(2, 9)
+                    });
+                }
+            });
+            extractUniqueRegions();
+            populateTrainersUI();
+            populatePairingUI();
+        };
 
         const displayDataPreview = (data) => {
             const previewHeader = document.getElementById('preview-header');
@@ -362,7 +479,7 @@
         // --- STEP 3: PAIRING LOGIC ---
         const populatePairingUI = () => {
             const container = document.getElementById('pairing-container');
-            container.innerHTML = (traineeData.length === 0) ? `<p class="text-gray-500 text-center">Upload trainee data in Step 1.</p>` : '';
+            container.innerHTML = (traineeData.length === 0) ? `<p class="text-gray-500 text-center">Upload or enter trainee data in Step 1.</p>` : '';
             traineeData.forEach(trainee => {
                 const trainersInRegion = trainers.filter(t => t.region === trainee.region);
                 const trainerOptions = trainersInRegion.map(t => `<option value="${t.name}">${t.name}</option>`).join('');
