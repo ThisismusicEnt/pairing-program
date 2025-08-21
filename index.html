@@ -219,19 +219,13 @@
         const updateGuideUI = () => {
             document.querySelectorAll('.guide-step').forEach(step => step.classList.add('hidden'));
             
-            // Special handling for step 1 which has two sub-views
             if (currentStep === 1) {
                 if (inputMethod === '') {
                     document.getElementById('step-1').classList.remove('hidden');
                 } else {
                     document.getElementById('step-1-data').classList.remove('hidden');
-                    if (inputMethod === 'upload') {
-                        document.getElementById('upload-section').classList.remove('hidden');
-                        document.getElementById('manual-section').classList.add('hidden');
-                    } else {
-                        document.getElementById('upload-section').classList.add('hidden');
-                        document.getElementById('manual-section').classList.remove('hidden');
-                    }
+                    document.getElementById('upload-section').classList.toggle('hidden', inputMethod !== 'upload');
+                    document.getElementById('manual-section').classList.toggle('hidden', inputMethod !== 'manual');
                 }
             } else {
                  document.getElementById(`step-${currentStep}`).classList.remove('hidden');
@@ -241,12 +235,11 @@
             for (let i = 1; i <= 5; i++) {
                 const indicator = document.getElementById(`step-indicator-${i}`);
                 const span = indicator.querySelector('span:first-child');
-                const stepToShow = (currentStep > 1) ? currentStep -1 : 1;
-                if (i < stepToShow) {
+                if (i < currentStep) {
                     span.classList.remove('bg-gray-400', 'bg-blue-600');
                     span.classList.add('bg-green-600');
                     indicator.classList.remove('opacity-50');
-                } else if (i === stepToShow) {
+                } else if (i === currentStep) {
                     span.classList.remove('bg-gray-400', 'bg-green-600');
                     span.classList.add('bg-blue-600');
                     indicator.classList.remove('opacity-50');
@@ -257,19 +250,21 @@
                 }
             }
             
-            nextBtn.classList.toggle('hidden', currentStep === 0 || inputMethod === '');
-            backBtn.classList.toggle('hidden', currentStep === 1);
-            nextBtn.classList.toggle('hidden', currentStep === 5);
-            nextBtn.textContent = (currentStep === 4) ? 'Generate Post' : 'Next';
+            const onChoiceScreen = currentStep === 1 && inputMethod === '';
+            backBtn.classList.toggle('hidden', onChoiceScreen);
+            nextBtn.classList.toggle('hidden', onChoiceScreen || currentStep === 5);
+             if (currentStep === 1 && inputMethod !== '') {
+                backBtn.classList.remove('hidden');
+            }
         };
 
         nextBtn.addEventListener('click', () => {
-            if (currentStep === 1) { // After data input
+            if (currentStep === 1) {
                 if (inputMethod === 'manual') {
                     saveManualTrainees();
                 }
                 if (traineeData.length === 0) {
-                    alert('Please add at least one trainee.');
+                    alert('Please add at least one trainee or upload a valid file.');
                     return;
                 }
             }
@@ -292,15 +287,13 @@
         });
 
         backBtn.addEventListener('click', () => {
-            if (currentStep > 1) {
+            if (currentStep === 1 && inputMethod !== '') {
+                inputMethod = '';
+                traineeData = [];
+            } else if (currentStep > 1) {
                  currentStep--;
-                 if (currentStep === 1) {
-                     // If we go back to step 1, reset the input choice
-                     inputMethod = '';
-                     traineeData = [];
-                 }
-                 updateGuideUI();
             }
+            updateGuideUI();
         });
         
         // --- STEP 1: CHOOSE METHOD ---
@@ -356,7 +349,7 @@
                         extractUniqueRegions();
                         populateTrainersUI();
                         populatePairingUI();
-                        nextBtn.classList.remove('hidden'); // Show next button after successful upload
+                        nextBtn.classList.remove('hidden');
                     } else {
                         throw new Error('Columns "First", "Last", and "MARKET" not found. Please check the column headers in your file.');
                     }
