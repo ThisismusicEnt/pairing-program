@@ -59,10 +59,18 @@
     <div class="container mx-auto p-4 sm:p-6 lg:p-8">
         <div class="bg-gray-800 rounded-2xl shadow-xl p-6 sm:p-8 border-4 animated-border">
 
-            <div class="text-center mb-8">
+            <div class="text-center mb-4">
                 <h1 class="text-3xl font-bold text-yellow-400">The Pairings Guide</h1>
                 <p class="text-gray-400 mt-2">A simple tool to pair trainers and trainees, view schedules, and generate posts.</p>
             </div>
+            
+            <!-- Save/Load Controls -->
+            <div class="flex justify-center items-center gap-4 mb-8 p-4 bg-gray-900 rounded-lg">
+                <button id="save-session-btn" class="bg-green-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-green-700 transition-colors">Save Session to File</button>
+                <input type="file" id="load-session-file" class="hidden" accept=".json">
+                <label for="load-session-file" class="bg-indigo-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-indigo-700 transition-colors cursor-pointer">Load Session from File</label>
+            </div>
+
 
             <!-- Step Indicator -->
             <div id="step-indicators" class="flex justify-center items-center mb-8">
@@ -168,7 +176,7 @@
 
             <!-- Navigation Buttons -->
             <div class="mt-10 flex justify-between items-center">
-                <button id="clear-data-btn" class="text-sm text-red-500 hover:underline">Clear Saved Data</button>
+                <button id="clear-data-btn" class="text-sm text-red-500 hover:underline">Clear All Data</button>
                 <div>
                     <button id="back-btn" class="bg-gray-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-gray-500 transition-colors hidden">Back</button>
                     <button id="next-btn" class="bg-blue-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-blue-700 transition-colors ml-2 hidden">Next</button>
@@ -197,31 +205,74 @@
         const chooseUploadBtn = document.getElementById('choose-upload-btn');
         const chooseManualBtn = document.getElementById('choose-manual-btn');
         const addManualTraineeBtn = document.getElementById('add-manual-trainee-btn');
+        const saveSessionBtn = document.getElementById('save-session-btn');
+        const loadSessionFile = document.getElementById('load-session-file');
 
 
-        // --- DATA PERSISTENCE (localStorage) ---
-        const saveData = () => {
-            localStorage.setItem('pairingsGuideData', JSON.stringify({ trainers, pairings }));
+        // --- DATA PERSISTENCE ---
+        const saveDataToLocal = () => {
+            localStorage.setItem('pairingsGuideData', JSON.stringify({ trainers, pairings, traineeData }));
         };
         
-        const loadData = () => {
+        const loadDataFromLocal = () => {
             const savedData = localStorage.getItem('pairingsGuideData');
             if (savedData) {
                 const data = JSON.parse(savedData);
                 trainers = data.trainers || [];
-                // pairings can be loaded if we want to persist dashboard state across sessions
-                // pairings = data.pairings || [];
+                pairings = data.pairings || [];
+                traineeData = data.traineeData || [];
+                if (pairings.length > 0) {
+                    // If there's a session, jump to dashboard
+                    currentStep = 6;
+                    inputMethod = 'loaded'; // special state
+                    extractUniqueRegions();
+                    renderDashboard();
+                    updateGuideUI();
+                    document.getElementById('step-indicators').classList.remove('hidden');
+                }
             }
         };
 
         clearDataBtn.addEventListener('click', () => {
-            if (window.confirm('Are you sure you want to clear all saved trainer data? This cannot be undone.')) {
+            if (window.confirm('Are you sure you want to clear all saved data? This will erase your current session and cannot be undone.')) {
                 localStorage.removeItem('pairingsGuideData');
-                trainers = [];
-                pairings = [];
                 location.reload();
             }
         });
+
+        // --- SESSION FILE HANDLING ---
+        saveSessionBtn.addEventListener('click', () => {
+            const sessionData = JSON.stringify({ trainers, pairings, traineeData });
+            const blob = new Blob([sessionData], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `pairings_session_${new Date().toISOString().split('T')[0]}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        });
+
+        loadSessionFile.addEventListener('change', (event) => {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const data = JSON.parse(e.target.result);
+                    trainers = data.trainers || [];
+                    pairings = data.pairings || [];
+                    traineeData = data.traineeData || [];
+                    saveDataToLocal(); // Save loaded data to local storage
+                    location.reload(); // Easiest way to reset the state and load the new data
+                } catch (error) {
+                    alert('Failed to load session file. It may be corrupted or in the wrong format.');
+                }
+            };
+            reader.readAsText(file);
+        });
+
 
         // --- GUIDE NAVIGATION LOGIC ---
         const updateGuideUI = () => {
@@ -239,13 +290,11 @@
                  document.getElementById(`step-${currentStep}`).classList.remove('hidden');
             }
 
-            // Update indicators
             for (let i = 1; i <= 6; i++) {
                 const indicator = document.getElementById(`step-indicator-${i}`);
                 if(!indicator) continue;
-                // FIX: Changed selector to be more specific to avoid selecting the wrong span.
                 const span = indicator.querySelector('span.w-8');
-                if (!span) continue; // If span not found, skip to next iteration
+                if (!span) continue;
                 if (i < currentStep) {
                     span.classList.remove('bg-gray-600', 'bg-blue-600');
                     span.classList.add('bg-green-600');
@@ -462,7 +511,7 @@
                     trainers.push({ id: entry.dataset.id, name, region });
                 }
             });
-            saveData();
+            saveDataToLocal();
             populatePairingUI();
         };
 
@@ -510,7 +559,7 @@
                     });
                 }
             });
-            saveData();
+            saveDataToLocal();
         };
 
         // --- STEP 4: CALENDAR ---
@@ -691,7 +740,7 @@
                 pairingsByRegion[region].forEach(p => {
                     const trainingDates = getTrainingDates(p.startDate, p.duration);
                     const workDaysPassed = trainingDates.filter(d => new Date(d) < new Date()).length;
-                    const progress = Math.round((workDaysPassed / p.duration) * 100);
+                    const progress = Math.min(100, Math.round((workDaysPassed / p.duration) * 100));
 
                     const pairingCard = document.createElement('div');
                     pairingCard.className = 'bg-gray-700 p-4 rounded-lg space-y-3';
@@ -726,9 +775,9 @@
                     const pairing = pairings.find(p => p.id === pairingId);
                     if (pairing) {
                         pairing.duration += 1;
-                        saveData();
-                        renderDashboard(); // Re-render dashboard
-                        generatePostsByRegion(); // Re-generate posts
+                        saveDataToLocal();
+                        renderDashboard();
+                        generatePostsByRegion();
                     }
                 });
             });
@@ -739,7 +788,7 @@
                     const pairing = pairings.find(p => p.id === pairingId);
                     if (pairing) {
                         pairing.notes = e.target.value;
-                        saveData();
+                        saveDataToLocal();
                     }
                 });
             });
@@ -748,7 +797,7 @@
 
         // --- INITIALIZATION ---
         window.onload = () => {
-            loadData();
+            loadDataFromLocal();
             updateGuideUI();
         };
     </script>
