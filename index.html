@@ -19,11 +19,9 @@
         .animated-border {
             animation: border-animation 10s infinite;
         }
-        /* Simple transition for wizard steps */
         .guide-step {
             transition: opacity 0.3s ease-in-out;
         }
-        /* Custom scrollbar for better aesthetics */
         ::-webkit-scrollbar {
             width: 8px;
         }
@@ -37,7 +35,6 @@
         ::-webkit-scrollbar-thumb:hover {
             background: #6b7280; /* gray-500 */
         }
-        /* Calendar specific styles */
         .calendar-grid {
             display: grid;
             grid-template-columns: repeat(7, 1fr);
@@ -68,7 +65,7 @@
             </div>
 
             <!-- Step Indicator -->
-            <div class="flex justify-center items-center mb-8">
+            <div id="step-indicators" class="flex justify-center items-center mb-8">
                 <div id="step-indicator-1" class="flex items-center"><span class="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold">1</span><span class="ml-2 text-gray-300 font-medium hidden sm:inline">Input</span></div>
                 <div class="flex-1 h-px bg-gray-600 mx-2"></div>
                 <div id="step-indicator-2" class="flex items-center opacity-50"><span class="w-8 h-8 rounded-full bg-gray-600 text-white flex items-center justify-center font-bold">2</span><span class="ml-2 text-gray-500 font-medium hidden sm:inline">Trainers</span></div>
@@ -78,6 +75,7 @@
                 <div id="step-indicator-4" class="flex items-center opacity-50"><span class="w-8 h-8 rounded-full bg-gray-600 text-white flex items-center justify-center font-bold">4</span><span class="ml-2 text-gray-500 font-medium hidden sm:inline">Schedule</span></div>
                 <div class="flex-1 h-px bg-gray-600 mx-2"></div>
                 <div id="step-indicator-5" class="flex items-center opacity-50"><span class="w-8 h-8 rounded-full bg-gray-600 text-white flex items-center justify-center font-bold">5</span><span class="ml-2 text-gray-500 font-medium hidden sm:inline">Post</span></div>
+                <div id="step-indicator-6" class="flex items-center opacity-50"><div class="flex-1 h-px bg-gray-600 mx-2"></div><span class="w-8 h-8 rounded-full bg-gray-600 text-white flex items-center justify-center font-bold">6</span><span class="ml-2 text-gray-500 font-medium hidden sm:inline">Dashboard</span></div>
             </div>
 
             <!-- Guide Content -->
@@ -160,6 +158,12 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- Step 6: Dashboard -->
+                 <div id="step-6" class="guide-step hidden">
+                    <h2 class="text-2xl font-semibold text-gray-200 mb-4">Dashboard</h2>
+                    <div id="dashboard-container" class="space-y-8 max-h-[70vh] overflow-y-auto pr-2"></div>
+                </div>
             </div>
 
             <!-- Navigation Buttons -->
@@ -197,7 +201,7 @@
 
         // --- DATA PERSISTENCE (localStorage) ---
         const saveData = () => {
-            localStorage.setItem('pairingsGuideData', JSON.stringify({ trainers }));
+            localStorage.setItem('pairingsGuideData', JSON.stringify({ trainers, pairings }));
         };
         
         const loadData = () => {
@@ -205,6 +209,8 @@
             if (savedData) {
                 const data = JSON.parse(savedData);
                 trainers = data.trainers || [];
+                // pairings can be loaded if we want to persist dashboard state across sessions
+                // pairings = data.pairings || [];
             }
         };
 
@@ -212,6 +218,7 @@
             if (window.confirm('Are you sure you want to clear all saved trainer data? This cannot be undone.')) {
                 localStorage.removeItem('pairingsGuideData');
                 trainers = [];
+                pairings = [];
                 location.reload();
             }
         });
@@ -233,9 +240,12 @@
             }
 
             // Update indicators
-            for (let i = 1; i <= 5; i++) {
+            for (let i = 1; i <= 6; i++) {
                 const indicator = document.getElementById(`step-indicator-${i}`);
-                const span = indicator.querySelector('span:first-child');
+                if(!indicator) continue;
+                // FIX: Changed selector to be more specific to avoid selecting the wrong span.
+                const span = indicator.querySelector('span.w-8');
+                if (!span) continue; // If span not found, skip to next iteration
                 if (i < currentStep) {
                     span.classList.remove('bg-gray-600', 'bg-blue-600');
                     span.classList.add('bg-green-600');
@@ -253,7 +263,7 @@
             
             const onChoiceScreen = currentStep === 1 && inputMethod === '';
             backBtn.classList.toggle('hidden', onChoiceScreen);
-            nextBtn.classList.toggle('hidden', onChoiceScreen || currentStep === 5);
+            nextBtn.classList.toggle('hidden', onChoiceScreen || currentStep === 6);
              if (currentStep === 1 && inputMethod !== '') {
                 backBtn.classList.remove('hidden');
             }
@@ -261,28 +271,21 @@
 
         nextBtn.addEventListener('click', () => {
             if (currentStep === 1) {
-                if (inputMethod === 'manual') {
-                    saveManualTrainees();
-                }
-                if (traineeData.length === 0) {
-                    alert('Please add at least one trainee or upload a valid file.');
-                    return;
-                }
+                if (inputMethod === 'manual') saveManualTrainees();
+                if (traineeData.length === 0) return alert('Please add at least one trainee or upload a valid file.');
             }
-
-            if (currentStep < 5) {
-                if (currentStep === 2) { 
-                    saveTrainers(); 
-                    if (trainers.length === 0) { 
-                        alert('Please add at least one trainer.');
-                        return; 
-                    } 
-                }
-                if (currentStep === 3) { savePairings(); }
-                if (currentStep === 4) { generatePostsByRegion(); }
-                
+            if (currentStep === 2) { 
+                saveTrainers(); 
+                if (trainers.length === 0) return alert('Please add at least one trainer.');
+            }
+            if (currentStep === 3) savePairings();
+            if (currentStep === 4) generatePostsByRegion();
+            if (currentStep === 5) renderDashboard();
+            
+            if (currentStep < 6) {
                 currentStep++;
-                if (currentStep === 4) { renderCalendar(); }
+                if (currentStep === 4) renderCalendar();
+                if (currentStep === 6) renderDashboard();
                 updateGuideUI();
             }
         });
@@ -310,7 +313,6 @@
         });
 
         // --- STEP 1b: DATA INPUT ---
-        // Upload Logic
         fileInput.addEventListener('change', (event) => {
             const file = event.target.files[0];
             if (!file) return;
@@ -323,9 +325,7 @@
                     const ws = workbook.Sheets[workbook.SheetNames[0]];
                     const jsonDataRaw = XLSX.utils.sheet_to_json(ws);
                     
-                    if (!jsonDataRaw || jsonDataRaw.length === 0) {
-                        throw new Error('The Excel sheet is empty or contains no data rows below the headers.');
-                    }
+                    if (!jsonDataRaw || jsonDataRaw.length === 0) throw new Error('The Excel sheet is empty or contains no data rows.');
 
                     const headers = Object.keys(jsonDataRaw[0]);
                     const firstKey = headers.find(h => h.trim().toLowerCase() === 'first');
@@ -342,9 +342,7 @@
                             }))
                             .filter(t => t.name && t.region);
                         
-                        if (traineeData.length === 0) {
-                            throw new Error('No valid trainee data found. Please check that the "First", "Last", and "MARKET" columns are populated with data.');
-                        }
+                        if (traineeData.length === 0) throw new Error('No valid trainee data found.');
 
                         displayDataPreview(traineeData);
                         extractUniqueRegions();
@@ -352,11 +350,10 @@
                         populatePairingUI();
                         nextBtn.classList.remove('hidden');
                     } else {
-                        throw new Error('Columns "First", "Last", and "MARKET" not found. Please check the column headers in your file.');
+                        throw new Error('Columns "First", "Last", and "MARKET" not found.');
                     }
                 } catch (error) {
-                    console.error("File reading error:", error);
-                    alert(`Failed to process the file. Please check the following:\n1. The file is a valid Excel (.xlsx, .xls) or .csv file.\n2. It contains columns named "First", "Last", and "MARKET".\n3. There is at least one row of data under the headers.\n\nError details: ${error.message}`);
+                    alert(`Failed to process the file.\n\nError details: ${error.message}`);
                     traineeData = [];
                     document.getElementById('file-name').textContent = 'Upload failed. Please try again.';
                     document.getElementById('data-preview').classList.add('hidden');
@@ -365,7 +362,6 @@
             reader.readAsArrayBuffer(file);
         });
 
-        // Manual Entry Logic
         const createManualTraineeInput = () => {
             const div = document.createElement('div');
             div.className = 'manual-trainee-entry flex items-center space-x-4 p-4 bg-gray-700 rounded-lg';
@@ -501,9 +497,20 @@
                 const startDate = entry.querySelector('.pairing-start-date').value;
                 const duration = parseInt(entry.querySelector('.pairing-duration-days').value, 10);
                 if (trainee && trainerName && order && startDate && duration > 0) {
-                    pairings.push({ traineeName: trainee.name, trainerName, order, startDate, duration, region: trainee.region });
+                    pairings.push({ 
+                        id: trainee.id,
+                        traineeName: trainee.name, 
+                        trainerName, 
+                        order, 
+                        startDate, 
+                        duration, 
+                        region: trainee.region,
+                        notes: '',
+                        extendedDays: 0
+                    });
                 }
             });
+            saveData();
         };
 
         // --- STEP 4: CALENDAR ---
@@ -548,7 +555,7 @@
         // --- STEP 5: POST GENERATION & EXPORT ---
         const generatePostsByRegion = () => {
             const container = document.getElementById('posts-container');
-            container.innerHTML = ''; // Clear previous posts
+            container.innerHTML = '';
             
             if (pairings.length === 0) {
                 container.innerHTML = `<p class="text-gray-500 text-center">No pairings created.</p>`;
@@ -556,57 +563,51 @@
             }
 
             const pairingsByRegion = pairings.reduce((acc, p) => {
-                acc[p.region] = acc[p.region] || [];
-                acc[p.region].push(p);
+                (acc[p.region] = acc[p.region] || []).push(p);
                 return acc;
             }, {});
 
-            for (const region in pairingsByRegion) {
+            Object.keys(pairingsByRegion).sort().forEach(region => {
                 const regionPairings = pairingsByRegion[region];
                 const pairingsByTrainer = regionPairings.reduce((acc, p) => {
-                    acc[p.trainerName] = acc[p.trainerName] || [];
-                    acc[p.trainerName].push(p);
+                    (acc[p.trainerName] = acc[p.trainerName] || []).push(p);
                     return acc;
                 }, {});
 
                 let postContent = `${region} Market - Week of ${new Date().toLocaleDateString()}\n\nGood evening,\n\nSee the BWZ field training pairings for next week below.\n\n`;
                 
-                for (const trainerName in pairingsByTrainer) {
+                Object.keys(pairingsByTrainer).sort().forEach(trainerName => {
                     postContent += `${trainerName}\n`;
                     pairingsByTrainer[trainerName].forEach(p => {
                         const trainingDates = getTrainingDates(p.startDate, p.duration);
                         const start = trainingDates[0];
                         const end = trainingDates[trainingDates.length - 1];
-                        const durationText = `${start.toLocaleDateString('en-US', { weekday: 'short' })} - ${end.toLocaleDateString('en-US', { weekday: 'short' })}`;
+                        const durationText = trainingDates.length > 1 ? `${start.toLocaleDateString('en-US', { weekday: 'short' })} - ${end.toLocaleDateString('en-US', { weekday: 'short' })}` : start.toLocaleDateString('en-US', { weekday: 'short' });
                         postContent += ` - ${p.traineeName} - ${durationText} - ${p.order}*\n`;
                     });
                     postContent += "\n";
-                }
+                });
                 postContent += "Please let me know if you need additional time beyond what is currently scheduled with your trainees.  Thank you everyone! 🙂";
                 
-                // Create UI for this region's post
                 const postDiv = document.createElement('div');
                 const uniqueId = `post-output-${region.replace(/\s/g, '')}`;
                 postDiv.innerHTML = `
                     <h4 class="text-lg font-semibold text-gray-200">${region} Market Post</h4>
                     <textarea id="${uniqueId}" rows="8" class="w-full p-3 mt-2 border border-gray-600 rounded-lg bg-gray-900 font-mono text-sm" readonly>${postContent}</textarea>
                     <button data-target="${uniqueId}" class="copy-post-btn mt-2 w-full bg-green-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-green-700 transition-colors">Copy ${region} Post</button>
-                    <span data-feedback="${uniqueId}" class="copy-success-feedback block text-center mt-2 text-green-500 font-semibold hidden">Copied!</span>
-                `;
+                    <span data-feedback="${uniqueId}" class="copy-success-feedback block text-center mt-2 text-green-500 font-semibold hidden">Copied!</span>`;
                 container.appendChild(postDiv);
-            }
+            });
 
-            // Add event listeners to all new copy buttons
             document.querySelectorAll('.copy-post-btn').forEach(button => {
                 button.addEventListener('click', (e) => {
                     const targetId = e.target.dataset.target;
-                    const feedbackId = e.target.dataset.feedback;
                     const textarea = document.getElementById(targetId);
                     navigator.clipboard.writeText(textarea.value).then(() => {
                         const feedback = document.querySelector(`[data-feedback="${targetId}"]`);
                         feedback.classList.remove('hidden');
                         setTimeout(() => feedback.classList.add('hidden'), 2000);
-                    }).catch(() => alert('Failed to copy.'));
+                    });
                 });
             });
         };
@@ -616,7 +617,7 @@
             let currentDate = new Date(startDateStr + 'T00:00:00');
             while (dates.length < duration) {
                 const dayOfWeek = currentDate.getDay();
-                if (dayOfWeek !== 0 && dayOfWeek !== 6) { // 0 = Sunday, 6 = Saturday
+                if (dayOfWeek !== 0 && dayOfWeek !== 6) {
                     dates.push(new Date(currentDate));
                 }
                 currentDate.setDate(currentDate.getDate() + 1);
@@ -625,10 +626,7 @@
         };
         
         const generateICSFile = () => {
-            if (pairings.length === 0) {
-                alert("Please create some pairings first before exporting to calendar.");
-                return;
-            }
+            if (pairings.length === 0) return alert("Please create some pairings first.");
 
             let icsContent = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//PairingsGuide//EN'];
 
@@ -636,7 +634,7 @@
                 const trainingDates = getTrainingDates(p.startDate, p.duration);
                 const startDate = trainingDates[0];
                 const endDate = trainingDates[trainingDates.length - 1];
-                endDate.setDate(endDate.getDate() + 1); // .ics end date is exclusive
+                endDate.setDate(endDate.getDate() + 1);
 
                 const formatDate = (date) => date.toISOString().split('T')[0].replace(/-/g, '');
                 
@@ -671,6 +669,82 @@
                 URL.revokeObjectURL(url);
             }
         });
+
+        // --- STEP 6: DASHBOARD ---
+        const renderDashboard = () => {
+            const container = document.getElementById('dashboard-container');
+            container.innerHTML = '';
+            if (pairings.length === 0) {
+                container.innerHTML = `<p class="text-gray-500 text-center">No pairings to display.</p>`;
+                return;
+            }
+
+            const pairingsByRegion = pairings.reduce((acc, p) => {
+                (acc[p.region] = acc[p.region] || []).push(p);
+                return acc;
+            }, {});
+
+            Object.keys(pairingsByRegion).sort().forEach(region => {
+                const regionDiv = document.createElement('div');
+                regionDiv.innerHTML = `<h3 class="text-2xl font-semibold text-yellow-400 border-b-2 border-gray-600 pb-2 mb-4">${region} Market</h3>`;
+                
+                pairingsByRegion[region].forEach(p => {
+                    const trainingDates = getTrainingDates(p.startDate, p.duration);
+                    const workDaysPassed = trainingDates.filter(d => new Date(d) < new Date()).length;
+                    const progress = Math.round((workDaysPassed / p.duration) * 100);
+
+                    const pairingCard = document.createElement('div');
+                    pairingCard.className = 'bg-gray-700 p-4 rounded-lg space-y-3';
+                    pairingCard.innerHTML = `
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <p class="font-bold text-lg">${p.traineeName}</p>
+                                <p class="text-sm text-gray-400">with ${p.trainerName}</p>
+                            </div>
+                            <button data-pairing-id="${p.id}" class="extend-day-btn bg-blue-600 text-white px-3 py-1 text-sm rounded-md hover:bg-blue-700">+ Extend 1 Day</button>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-300">Progress: ${workDaysPassed} of ${p.duration} days</p>
+                            <div class="w-full bg-gray-600 rounded-full h-2.5 mt-1">
+                                <div class="bg-green-500 h-2.5 rounded-full" style="width: ${progress}%"></div>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="text-sm font-medium text-gray-300">Notes:</label>
+                            <textarea data-pairing-id="${p.id}" class="notes-input w-full mt-1 p-2 border border-gray-600 rounded-lg bg-gray-800 text-gray-200" rows="2">${p.notes}</textarea>
+                        </div>
+                    `;
+                    regionDiv.appendChild(pairingCard);
+                });
+                container.appendChild(regionDiv);
+            });
+
+            // Add event listeners for new dashboard elements
+            document.querySelectorAll('.extend-day-btn').forEach(btn => {
+                btn.addEventListener('click', e => {
+                    const pairingId = e.target.dataset.pairingId;
+                    const pairing = pairings.find(p => p.id === pairingId);
+                    if (pairing) {
+                        pairing.duration += 1;
+                        saveData();
+                        renderDashboard(); // Re-render dashboard
+                        generatePostsByRegion(); // Re-generate posts
+                    }
+                });
+            });
+
+            document.querySelectorAll('.notes-input').forEach(input => {
+                input.addEventListener('change', e => {
+                    const pairingId = e.target.dataset.pairingId;
+                    const pairing = pairings.find(p => p.id === pairingId);
+                    if (pairing) {
+                        pairing.notes = e.target.value;
+                        saveData();
+                    }
+                });
+            });
+        };
+
 
         // --- INITIALIZATION ---
         window.onload = () => {
