@@ -1,0 +1,1153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Pairings Guide</title>
+    <!-- Tailwind CSS for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- SheetJS/xlsx library for reading Excel files -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        @keyframes border-animation {
+            0% { border-color: #facc15; } /* yellow-400 */
+            25% { border-color: #fb923c; } /* orange-400 */
+            50% { border-color: #60a5fa; } /* blue-400 */
+            75% { border-color: #818cf8; } /* indigo-400 */
+            100% { border-color: #facc15; } /* yellow-400 */
+        }
+        .animated-border {
+            animation: border-animation 10s infinite;
+        }
+        .guide-step {
+            transition: opacity 0.3s ease-in-out;
+        }
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #1f2937; /* gray-800 */
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #4b5563; /* gray-600 */
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #6b7280; /* gray-500 */
+        }
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 4px;
+        }
+        .calendar-day {
+            min-height: 100px;
+        }
+        .calendar-event {
+            font-size: 0.75rem;
+            padding: 2px 4px;
+            border-radius: 4px;
+            margin-top: 2px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        /* Styles for the modals */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 50;
+        }
+    </style>
+</head>
+<body class="bg-gray-900 font-sans antialiased text-gray-200">
+
+    <div class="container mx-auto p-4 sm:p-6 lg:p-8">
+        <div class="bg-gray-800 rounded-2xl shadow-xl p-6 sm:p-8 border-4 animated-border">
+
+            <div class="text-center mb-4">
+                <h1 class="text-3xl font-bold text-yellow-400">The Pairings Guide</h1>
+                <p class="text-gray-400 mt-2">A simple tool to pair trainers and trainees, view schedules, and generate posts.</p>
+            </div>
+            
+            <!-- Save/Load Controls -->
+            <div class="flex justify-center items-center gap-4 mb-8 p-4 bg-gray-900 rounded-lg">
+                <button id="save-session-btn" class="bg-green-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-green-700 transition-colors">Save Session to File</button>
+                <input type="file" id="load-session-file" class="hidden" accept=".json">
+                <label for="load-session-file" class="bg-indigo-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-indigo-700 transition-colors cursor-pointer">Load Session from File</label>
+            </div>
+
+
+            <!-- Step Indicator -->
+            <div id="step-indicators" class="flex justify-center items-center mb-8">
+                <div id="step-indicator-1" class="flex items-center"><span class="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold">1</span><span class="ml-2 text-gray-300 font-medium hidden sm:inline">Input</span></div>
+                <div class="flex-1 h-px bg-gray-600 mx-2"></div>
+                <div id="step-indicator-2" class="flex items-center opacity-50"><span class="w-8 h-8 rounded-full bg-gray-600 text-white flex items-center justify-center font-bold">2</span><span class="ml-2 text-gray-500 font-medium hidden sm:inline">Trainers</span></div>
+                <div class="flex-1 h-px bg-gray-600 mx-2"></div>
+                <div id="step-indicator-3" class="flex items-center opacity-50"><span class="w-8 h-8 rounded-full bg-gray-600 text-white flex items-center justify-center font-bold">3</span><span class="ml-2 text-gray-500 font-medium hidden sm:inline">Pairs</span></div>
+                <div class="flex-1 h-px bg-gray-600 mx-2"></div>
+                <div id="step-indicator-4" class="flex items-center opacity-50"><span class="w-8 h-8 rounded-full bg-gray-600 text-white flex items-center justify-center font-bold">4</span><span class="ml-2 text-gray-500 font-medium hidden sm:inline">Schedule</span></div>
+                <div class="flex-1 h-px bg-gray-600 mx-2"></div>
+                <div id="step-indicator-5" class="flex items-center opacity-50"><span class="w-8 h-8 rounded-full bg-gray-600 text-white flex items-center justify-center font-bold">5</span><span class="ml-2 text-gray-500 font-medium hidden sm:inline">Post</span></div>
+                <div id="step-indicator-6" class="flex items-center opacity-50"><div class="flex-1 h-px bg-gray-600 mx-2"></div><span class="w-8 h-8 rounded-full bg-gray-600 text-white flex items-center justify-center font-bold">6</span><span class="ml-2 text-gray-500 font-medium hidden sm:inline">Dashboard</span></div>
+            </div>
+
+            <!-- Guide Content -->
+            <div id="guide-content">
+                <!-- Step 1: Choose Input Method -->
+                <div id="step-1" class="guide-step">
+                    <h2 class="text-2xl font-semibold text-gray-200 mb-4 text-center">How would you like to add trainees?</h2>
+                    <div class="flex justify-center items-center gap-8 mt-8">
+                        <button id="choose-upload-btn" class="bg-blue-600 text-white font-bold py-3 px-8 rounded-lg hover:bg-blue-700 transition-colors text-lg">Upload Spreadsheet</button>
+                        <button id="choose-manual-btn" class="bg-gray-600 text-white font-bold py-3 px-8 rounded-lg hover:bg-gray-700 transition-colors text-lg">Enter Manually</button>
+                    </div>
+                </div>
+
+                <!-- Step 1b: Upload or Manual Entry -->
+                <div id="step-1-data" class="guide-step hidden">
+                    <!-- Upload Section -->
+                    <div id="upload-section" class="hidden">
+                        <h2 class="text-2xl font-semibold text-gray-200 mb-4">Upload Trainee Excel Sheet</h2>
+                        <p class="text-gray-400 mb-6">Upload an Excel file (.xlsx, .xls, .csv). It must contain columns for <code class="bg-gray-700 text-yellow-400 p-1 rounded">'First'</code> name, <code class="bg-gray-700 text-yellow-400 p-1 rounded">'Last'</code> name, and <code class="bg-gray-700 text-yellow-400 p-1 rounded">'MARKET'</code>.</p>
+                        <div class="border-2 border-dashed border-gray-500 rounded-lg p-8 text-center">
+                            <input type="file" id="excel-file" class="hidden" accept=".xlsx, .xls, .csv">
+                            <label for="excel-file" class="cursor-pointer text-blue-400 font-semibold">Click here to select your file</label>
+                            <p id="file-name" class="mt-2 text-gray-500"></p>
+                        </div>
+                        <div id="data-preview" class="mt-6 hidden max-h-64 overflow-y-auto">
+                            <h3 class="font-semibold mb-2">Data Preview:</h3>
+                            <table class="min-w-full bg-gray-700 border border-gray-600"><thead id="preview-header" class="bg-gray-800"></thead><tbody id="preview-body"></tbody></table>
+                        </div>
+                    </div>
+                    <!-- Manual Entry Section -->
+                    <div id="manual-section" class="hidden">
+                        <h2 class="text-2xl font-semibold text-gray-200 mb-4">Manually Enter Trainees</h2>
+                        <p class="text-gray-400 mb-6">Add your trainees below. You can add as many as you need.</p>
+                        <div id="manual-trainees-list" class="space-y-4"></div>
+                        <button id="add-manual-trainee-btn" class="mt-6 bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors">+ Add Another Trainee</button>
+                    </div>
+                </div>
+
+                <!-- Step 2: Input Trainers -->
+                <div id="step-2" class="guide-step hidden">
+                    <h2 class="text-2xl font-semibold text-gray-200 mb-4">Step 2: Add Trainers & Regions</h2>
+                    <p class="text-gray-400 mb-6">Enter trainer names and select their market/region. This data will be saved in your browser for next time.</p>
+                    <div id="trainers-list" class="space-y-4"></div>
+                    <button id="add-trainer-btn" class="mt-6 bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors">+ Add Another Trainer</button>
+                </div>
+
+                <!-- Step 3: Pair Trainees -->
+                <div id="step-3" class="guide-step hidden">
+                    <h2 class="text-2xl font-semibold text-gray-200 mb-4">Step 3: Create Pairings</h2>
+                    <p class="text-gray-400 mb-6">Assign a trainer, enter the Order #, and set the training dates for each trainee.</p>
+                    <div id="pairing-container" class="space-y-6 max-h-[50vh] overflow-y-auto pr-2"></div>
+                </div>
+
+                <!-- Step 4: Calendar Schedule -->
+                <div id="step-4" class="guide-step hidden">
+                    <h2 class="text-2xl font-semibold text-gray-200 mb-4">Step 4: Training Schedule</h2>
+                    <div class="flex justify-between items-center mb-4">
+                        <button id="prev-month-btn" class="bg-gray-700 p-2 rounded-lg hover:bg-gray-600">&lt;</button>
+                        <h3 id="calendar-month-year" class="text-xl font-semibold"></h3>
+                        <button id="next-month-btn" class="bg-gray-700 p-2 rounded-lg hover:bg-gray-600">&gt;</button>
+                    </div>
+                    <div class="calendar-grid text-sm font-bold text-center text-gray-400 mb-2">
+                        <div>Sun</div><div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div>
+                    </div>
+                    <div id="calendar-grid-body" class="calendar-grid"></div>
+                </div>
+
+                <!-- Step 5: Generate Post -->
+                <div id="step-5" class="guide-step hidden">
+                    <h2 class="text-2xl font-semibold text-gray-200 mb-4">Step 5: Generate and Export</h2>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <div>
+                            <h3 class="text-xl font-semibold text-yellow-400 mb-4">Announcement Posts by Region</h3>
+                            <div id="posts-container" class="space-y-6 max-h-[60vh] overflow-y-auto pr-2"></div>
+                        </div>
+                        <div>
+                            <h3 class="text-xl font-semibold text-yellow-400 mb-4">Calendar Events</h3>
+                            <p class="text-gray-400 mb-12">Download an .ics file to import these pairings into your calendar (Outlook, Google Calendar, etc.). This will only include weekdays.</p>
+                            <button id="download-ics-btn" class="w-full bg-indigo-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-indigo-700 transition-colors">Download Calendar File (.ics)</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Step 6: Dashboard -->
+                 <div id="step-6" class="guide-step hidden">
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-2xl font-semibold text-gray-200">Dashboard</h2>
+                        <div class="flex gap-4">
+                            <button id="new-group-btn" class="bg-yellow-500 text-gray-900 font-bold py-2 px-4 rounded-lg hover:bg-yellow-600 transition-colors hidden">Start New Group</button>
+                            <button id="show-reports-calendar-btn" class="bg-purple-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-purple-700 transition-colors">View Reports</button>
+                            <button id="show-add-trainee-modal-btn" class="bg-green-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-green-700 transition-colors">+ Add Trainee</button>
+                        </div>
+                    </div>
+                    <div id="dashboard-container" class="space-y-8 max-h-[70vh] overflow-y-auto pr-2"></div>
+                </div>
+            </div>
+
+            <!-- Navigation Buttons -->
+            <div class="mt-10 flex justify-between items-center">
+                <button id="clear-data-btn" class="text-sm text-red-500 hover:underline">Clear All Data</button>
+                <div>
+                    <button id="back-btn" class="bg-gray-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-gray-500 transition-colors hidden">Back</button>
+                    <button id="next-btn" class="bg-blue-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-blue-700 transition-colors ml-2 hidden">Next</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal for adding a new trainee -->
+    <div id="add-trainee-modal" class="modal-overlay hidden">
+        <div class="bg-gray-800 rounded-lg shadow-xl p-8 w-full max-w-md space-y-6 border-2 border-blue-500">
+            <h2 class="text-2xl font-semibold text-center">Add New Trainee</h2>
+            <div>
+                <label for="new-trainee-first-name" class="block text-sm font-medium text-gray-300">First Name</label>
+                <input type="text" id="new-trainee-first-name" class="mt-1 w-full p-2 border border-gray-600 rounded-lg bg-gray-900 text-gray-200" placeholder="e.g., Jane">
+            </div>
+            <div>
+                <label for="new-trainee-last-name" class="block text-sm font-medium text-gray-300">Last Name</label>
+                <input type="text" id="new-trainee-last-name" class="mt-1 w-full p-2 border border-gray-600 rounded-lg bg-gray-900 text-gray-200" placeholder="e.g., Smith">
+            </div>
+            <div>
+                <label for="new-trainee-market" class="block text-sm font-medium text-gray-300">Market</label>
+                <input type="text" id="new-trainee-market" class="mt-1 w-full p-2 border border-gray-600 rounded-lg bg-gray-900 text-gray-200" placeholder="e.g., SEPA">
+            </div>
+            <div class="flex justify-end gap-4 pt-4">
+                <button id="cancel-add-trainee-btn" class="bg-gray-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-gray-500">Cancel</button>
+                <button id="save-new-trainee-btn" class="bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700">Save Trainee</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pairing Report Modal -->
+    <div id="pairing-report-modal" class="modal-overlay hidden">
+        <div class="bg-gray-800 rounded-lg shadow-xl p-8 w-full max-w-2xl space-y-6 border-2 border-green-500">
+            <div class="flex justify-between items-center">
+                <h2 class="text-2xl font-semibold text-green-400">Pairing Report</h2>
+                <button id="close-report-modal-btn" class="text-3xl font-bold text-gray-400 hover:text-white">&times;</button>
+            </div>
+            <div id="report-content" class="space-y-3 text-gray-300 max-h-[60vh] overflow-y-auto p-4 bg-gray-900 rounded-lg">
+                <!-- Report content will be injected here by JavaScript -->
+            </div>
+            <div class="flex justify-end gap-4 pt-4">
+                <button id="print-report-btn" class="bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700">Print Report</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Reports Calendar Modal -->
+    <div id="reports-calendar-modal" class="modal-overlay hidden">
+        <div class="bg-gray-800 rounded-lg shadow-xl p-8 w-full max-w-4xl space-y-6 border-2 border-purple-500">
+            <div class="flex justify-between items-center">
+                <h2 class="text-2xl font-semibold text-purple-400">Reports Calendar</h2>
+                <button id="close-reports-calendar-btn" class="text-3xl font-bold text-gray-400 hover:text-white">&times;</button>
+            </div>
+            <div id="reports-calendar-content" class="space-y-4 max-h-[70vh] overflow-y-auto p-2">
+                <!-- Reports will be listed here -->
+            </div>
+        </div>
+    </div>
+
+
+    <script>
+        // --- STATE MANAGEMENT ---
+        let currentStep = 1;
+        let inputMethod = ''; // 'upload' or 'manual'
+        let traineeData = [];
+        let trainers = [];
+        let pairings = [];
+        let uniqueRegions = [];
+        let calendarDate = new Date();
+
+        // --- DOM ELEMENTS ---
+        const backBtn = document.getElementById('back-btn');
+        const nextBtn = document.getElementById('next-btn');
+        const fileInput = document.getElementById('excel-file');
+        const addTrainerBtn = document.getElementById('add-trainer-btn');
+        const clearDataBtn = document.getElementById('clear-data-btn');
+        const downloadIcsBtn = document.getElementById('download-ics-btn');
+        const chooseUploadBtn = document.getElementById('choose-upload-btn');
+        const chooseManualBtn = document.getElementById('choose-manual-btn');
+        const addManualTraineeBtn = document.getElementById('add-manual-trainee-btn');
+        const saveSessionBtn = document.getElementById('save-session-btn');
+        const loadSessionFile = document.getElementById('load-session-file');
+        const addTraineeModal = document.getElementById('add-trainee-modal');
+        const saveNewTraineeBtn = document.getElementById('save-new-trainee-btn');
+        const cancelAddTraineeBtn = document.getElementById('cancel-add-trainee-btn');
+        const pairingReportModal = document.getElementById('pairing-report-modal');
+        const closeReportModalBtn = document.getElementById('close-report-modal-btn');
+        const printReportBtn = document.getElementById('print-report-btn');
+        const showReportsCalendarBtn = document.getElementById('show-reports-calendar-btn');
+        const reportsCalendarModal = document.getElementById('reports-calendar-modal');
+        const closeReportsCalendarBtn = document.getElementById('close-reports-calendar-btn');
+        const newGroupBtn = document.getElementById('new-group-btn');
+
+        // --- DATA PERSISTENCE ---
+        const saveDataToLocal = () => {
+            localStorage.setItem('pairingsGuideData', JSON.stringify({ trainers, pairings, traineeData }));
+        };
+        
+        const loadDataFromLocal = () => {
+            const savedData = localStorage.getItem('pairingsGuideData');
+            if (savedData) {
+                const data = JSON.parse(savedData);
+                trainers = data.trainers || [];
+                pairings = data.pairings || [];
+                traineeData = data.traineeData || [];
+                if (traineeData.length > 0 || pairings.some(p => p.status === 'In Progress')) {
+                    currentStep = 6;
+                    inputMethod = 'loaded'; 
+                    extractUniqueRegions();
+                    renderDashboard();
+                    updateGuideUI();
+                    document.getElementById('step-indicators').classList.remove('hidden');
+                }
+            }
+        };
+
+        clearDataBtn.addEventListener('click', () => {
+            if (confirm('DANGER: Are you sure you want to clear ALL data? This will permanently erase all trainers, reports, and current pairings. This action cannot be undone.')) {
+                localStorage.removeItem('pairingsGuideData');
+                location.reload();
+            }
+        });
+
+        // --- SESSION FILE HANDLING ---
+        saveSessionBtn.addEventListener('click', () => {
+            const sessionData = JSON.stringify({ trainers, pairings, traineeData });
+            const blob = new Blob([sessionData], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `pairings_session_${new Date().toISOString().split('T')[0]}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        });
+
+        loadSessionFile.addEventListener('change', (event) => {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const data = JSON.parse(e.target.result);
+                    trainers = data.trainers || [];
+                    pairings = data.pairings || [];
+                    traineeData = data.traineeData || [];
+                    saveDataToLocal();
+                    location.reload();
+                } catch (error) {
+                    alert('Failed to load session file. It may be corrupted or in the wrong format.');
+                }
+            };
+            reader.readAsText(file);
+        });
+
+
+        // --- GUIDE NAVIGATION LOGIC ---
+        const updateGuideUI = () => {
+            document.querySelectorAll('.guide-step').forEach(step => step.classList.add('hidden'));
+            
+            if (currentStep === 1) {
+                if (inputMethod === '') {
+                    document.getElementById('step-1').classList.remove('hidden');
+                } else {
+                    document.getElementById('step-1-data').classList.remove('hidden');
+                    document.getElementById('upload-section').classList.toggle('hidden', inputMethod !== 'upload');
+                    document.getElementById('manual-section').classList.toggle('hidden', inputMethod !== 'manual');
+                }
+            } else {
+                 document.getElementById(`step-${currentStep}`).classList.remove('hidden');
+            }
+
+            for (let i = 1; i <= 6; i++) {
+                const indicator = document.getElementById(`step-indicator-${i}`);
+                if(!indicator) continue;
+                const span = indicator.querySelector('span.w-8');
+                if (!span) continue;
+                if (i < currentStep) {
+                    span.classList.remove('bg-gray-600', 'bg-blue-600');
+                    span.classList.add('bg-green-600');
+                    indicator.classList.remove('opacity-50');
+                } else if (i === currentStep) {
+                    span.classList.remove('bg-gray-600', 'bg-green-600');
+                    span.classList.add('bg-blue-600');
+                    indicator.classList.remove('opacity-50');
+                } else {
+                    span.classList.remove('bg-blue-600', 'bg-green-600');
+                    span.classList.add('bg-gray-600');
+                    indicator.classList.add('opacity-50');
+                }
+            }
+            
+            const onChoiceScreen = currentStep === 1 && inputMethod === '';
+            backBtn.classList.toggle('hidden', onChoiceScreen);
+            nextBtn.classList.toggle('hidden', onChoiceScreen || currentStep === 6);
+             if (currentStep === 1 && inputMethod !== '') {
+                backBtn.classList.remove('hidden');
+            }
+        };
+
+        nextBtn.addEventListener('click', () => {
+            if (currentStep === 1) {
+                if (inputMethod === 'manual') saveManualTrainees();
+                if (traineeData.length === 0) return alert('Please add at least one trainee or upload a valid file.');
+            }
+            if (currentStep === 2) { 
+                saveTrainers(); 
+                if (trainers.length === 0) return alert('Please add at least one trainer.');
+            }
+            if (currentStep === 3) savePairings();
+            if (currentStep === 4) generatePostsByRegion();
+            if (currentStep === 5) renderDashboard();
+            
+            if (currentStep < 6) {
+                currentStep++;
+                if (currentStep === 4) renderCalendar();
+                if (currentStep === 6) renderDashboard();
+                updateGuideUI();
+            }
+        });
+
+        backBtn.addEventListener('click', () => {
+            if (currentStep === 1 && inputMethod !== '') {
+                inputMethod = '';
+                traineeData = [];
+            } else if (currentStep > 1) {
+                 currentStep--;
+            }
+            updateGuideUI();
+        });
+        
+        // --- STEP 1: CHOOSE METHOD ---
+        chooseUploadBtn.addEventListener('click', () => {
+            inputMethod = 'upload';
+            updateGuideUI();
+        });
+
+        chooseManualBtn.addEventListener('click', () => {
+            inputMethod = 'manual';
+            populateManualTraineeUI();
+            updateGuideUI();
+        });
+
+        // --- STEP 1b: DATA INPUT ---
+        fileInput.addEventListener('change', (event) => {
+            const file = event.target.files[0];
+            if (!file) return;
+            document.getElementById('file-name').textContent = `Selected: ${file.name}`;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    const ws = workbook.Sheets[workbook.SheetNames[0]];
+                    const jsonDataRaw = XLSX.utils.sheet_to_json(ws);
+                    
+                    if (!jsonDataRaw || jsonDataRaw.length === 0) throw new Error('The Excel sheet is empty or contains no data rows.');
+
+                    const headers = Object.keys(jsonDataRaw[0]);
+                    const firstKey = headers.find(h => h.trim().toLowerCase() === 'first');
+                    const lastKey = headers.find(h => h.trim().toLowerCase() === 'last');
+                    const marketKey = headers.find(h => h.trim().toLowerCase() === 'market');
+
+                    if (firstKey && lastKey && marketKey) {
+                        traineeData = jsonDataRaw
+                            .filter(row => row[firstKey] && row[lastKey] && row[marketKey])
+                            .map(row => ({ 
+                                name: `${row[firstKey]} ${row[lastKey]}`.trim(), 
+                                region: row[marketKey],
+                                id: Math.random().toString(36).substr(2, 9) 
+                            }))
+                            .filter(t => t.name && t.region);
+                        
+                        if (traineeData.length === 0) throw new Error('No valid trainee data found.');
+
+                        displayDataPreview(traineeData);
+                        extractUniqueRegions();
+                        populateTrainersUI();
+                        populatePairingUI();
+                        nextBtn.classList.remove('hidden');
+                    } else {
+                        throw new Error('Columns "First", "Last", and "MARKET" not found.');
+                    }
+                } catch (error) {
+                    alert(`Failed to process the file.\n\nError details: ${error.message}`);
+                    traineeData = [];
+                    document.getElementById('file-name').textContent = 'Upload failed. Please try again.';
+                    document.getElementById('data-preview').classList.add('hidden');
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        });
+
+        const createManualTraineeInput = () => {
+            const div = document.createElement('div');
+            div.className = 'manual-trainee-entry flex items-center space-x-4 p-4 bg-gray-700 rounded-lg';
+            div.innerHTML = `
+                <div class="flex-1"><label class="block text-sm font-medium text-gray-300">First Name</label><input type="text" class="mt-1 trainee-first-name w-full p-2 border border-gray-600 rounded-lg bg-gray-800 text-gray-200" placeholder="e.g., John"></div>
+                <div class="flex-1"><label class="block text-sm font-medium text-gray-300">Last Name</label><input type="text" class="mt-1 trainee-last-name w-full p-2 border border-gray-600 rounded-lg bg-gray-800 text-gray-200" placeholder="e.g., Doe"></div>
+                <div class="flex-1"><label class="block text-sm font-medium text-gray-300">Market</label><input type="text" class="mt-1 trainee-market w-full p-2 border border-gray-600 rounded-lg bg-gray-800 text-gray-200" placeholder="e.g., SEPA"></div>
+                <button class="remove-manual-trainee-btn bg-red-500 text-white p-2 rounded-full hover:bg-red-600 self-end mb-1"><svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm4 0a1 1 0 012 0v6a1 1 0 11-2 0V8z" clip-rule="evenodd" /></svg></button>`;
+            div.querySelector('.remove-manual-trainee-btn').addEventListener('click', () => div.remove());
+            return div;
+        };
+        
+        const populateManualTraineeUI = () => {
+            const container = document.getElementById('manual-trainees-list');
+            container.innerHTML = '';
+            container.appendChild(createManualTraineeInput());
+        };
+
+        addManualTraineeBtn.addEventListener('click', () => {
+            document.getElementById('manual-trainees-list').appendChild(createManualTraineeInput());
+        });
+
+        const saveManualTrainees = () => {
+            traineeData = [];
+            document.querySelectorAll('.manual-trainee-entry').forEach(entry => {
+                const firstName = entry.querySelector('.trainee-first-name').value.trim();
+                const lastName = entry.querySelector('.trainee-last-name').value.trim();
+                const market = entry.querySelector('.trainee-market').value.trim();
+                if (firstName && lastName && market) {
+                    traineeData.push({
+                        name: `${firstName} ${lastName}`,
+                        region: market,
+                        id: Math.random().toString(36).substr(2, 9)
+                    });
+                }
+            });
+            extractUniqueRegions();
+            populateTrainersUI();
+            populatePairingUI();
+        };
+
+        const displayDataPreview = (data) => {
+            const previewHeader = document.getElementById('preview-header');
+            const previewBody = document.getElementById('preview-body');
+            previewHeader.innerHTML = ''; previewBody.innerHTML = '';
+            const headers = ['Name', 'MARKET'];
+            const headerRow = document.createElement('tr');
+            headers.forEach(h => headerRow.innerHTML += `<th class="px-4 py-2 text-left">${h}</th>`);
+            previewHeader.appendChild(headerRow);
+            data.slice(0, 5).forEach(row => {
+                const tr = document.createElement('tr');
+                tr.className = 'border-t border-gray-600';
+                tr.innerHTML += `<td class="px-4 py-2">${row.name}</td>`;
+                tr.innerHTML += `<td class="px-4 py-2">${row.region}</td>`;
+                previewBody.appendChild(tr);
+            });
+            document.getElementById('data-preview').classList.remove('hidden');
+        };
+
+        const extractUniqueRegions = () => {
+            const allRegions = new Set(traineeData.map(t => t.region));
+            trainers.forEach(t => allRegions.add(t.region));
+            uniqueRegions = Array.from(allRegions).sort();
+        };
+
+        // --- STEP 2: TRAINER MANAGEMENT ---
+        const createTrainerInput = (trainer = { id: Date.now(), name: '', region: '' }) => {
+            const div = document.createElement('div');
+            div.className = 'trainer-entry flex items-center space-x-4 p-4 bg-gray-700 rounded-lg';
+            div.dataset.id = trainer.id;
+            const regionOptions = uniqueRegions.map(r => `<option value="${r}" ${trainer.region === r ? 'selected' : ''}>${r}</option>`).join('');
+            div.innerHTML = `
+                <div class="flex-1"><label class="block text-sm font-medium text-gray-300">Trainer Name</label><input type="text" value="${trainer.name}" class="mt-1 trainer-name w-full p-2 border border-gray-600 rounded-lg bg-gray-800 text-gray-200" placeholder="e.g., John Walsh"></div>
+                <div class="flex-1"><label class="block text-sm font-medium text-gray-300">Market/Region</label><select class="mt-1 trainer-region w-full p-2 border border-gray-600 rounded-lg bg-gray-800 text-gray-200"><option value="">Select Market</option>${regionOptions}</select></div>
+                <button class="remove-trainer-btn bg-red-500 text-white p-2 rounded-full hover:bg-red-600 self-end mb-1"><svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm4 0a1 1 0 012 0v6a1 1 0 11-2 0V8z" clip-rule="evenodd" /></svg></button>`;
+            div.querySelector('.remove-trainer-btn').addEventListener('click', () => div.remove());
+            return div;
+        };
+
+        const populateTrainersUI = () => {
+            const container = document.getElementById('trainers-list');
+            container.innerHTML = '';
+            if (trainers.length > 0) {
+                trainers.forEach(trainer => container.appendChild(createTrainerInput(trainer)));
+            } else {
+                container.appendChild(createTrainerInput());
+            }
+        };
+
+        addTrainerBtn.addEventListener('click', () => {
+            document.getElementById('trainers-list').appendChild(createTrainerInput());
+        });
+        
+        const saveTrainers = () => {
+            trainers = [];
+            document.querySelectorAll('.trainer-entry').forEach(entry => {
+                const name = entry.querySelector('.trainer-name').value.trim();
+                const region = entry.querySelector('.trainer-region').value;
+                if (name && region) {
+                    trainers.push({ id: entry.dataset.id, name, region });
+                }
+            });
+            saveDataToLocal();
+            populatePairingUI();
+        };
+
+        // --- STEP 3: PAIRING LOGIC ---
+        const populatePairingUI = () => {
+            const container = document.getElementById('pairing-container');
+            container.innerHTML = (traineeData.length === 0) ? `<p class="text-gray-500 text-center">Upload or enter trainee data in Step 1.</p>` : '';
+            traineeData.forEach(trainee => {
+                const existingPairing = pairings.find(p => p.id === trainee.id) || {};
+                const trainersInRegion = trainers.filter(t => t.region === trainee.region);
+                const trainerOptions = trainersInRegion.map(t => `<option value="${t.name}" ${existingPairing.trainerName === t.name ? 'selected' : ''}>${t.name}</option>`).join('');
+                const div = document.createElement('div');
+                div.className = 'pairing-entry bg-gray-700 p-4 rounded-lg shadow-sm border border-gray-600';
+                div.dataset.traineeId = trainee.id;
+                div.innerHTML = `
+                    <div class="grid grid-cols-1 md:grid-cols-5 gap-4 items-center">
+                        <div><p class="font-bold text-lg text-yellow-400">${trainee.name}</p><p class="text-sm text-gray-400">${trainee.region}</p></div>
+                        <div><label class="block text-sm font-medium text-gray-300">Assign Trainer</label><select class="pairing-trainer-select mt-1 w-full p-2 border border-gray-600 rounded-lg bg-gray-800 text-gray-200" ${trainersInRegion.length === 0 ? 'disabled' : ''}><option value="">${trainersInRegion.length === 0 ? 'No trainers' : 'Select trainer'}</option>${trainerOptions}</select></div>
+                        <div><label class="block text-sm font-medium text-gray-300">Order #</label><input type="text" class="pairing-order-input mt-1 w-full p-2 border border-gray-600 rounded-lg bg-gray-800 text-gray-200" placeholder="e.g. 632261" value="${existingPairing.order || ''}"></div>
+                        <div><label class="block text-sm font-medium text-gray-300">Start Date</label><input type="date" class="pairing-start-date mt-1 w-full p-2 border border-gray-600 rounded-lg bg-gray-800 text-gray-200" value="${existingPairing.startDate || ''}"></div>
+                        <div><label class="block text-sm font-medium text-gray-300">Training Days</label><input type="number" class="pairing-duration-days mt-1 w-full p-2 border border-gray-600 rounded-lg bg-gray-800 text-gray-200" value="${existingPairing.duration || 2}" min="1"></div>
+                    </div>`;
+                container.appendChild(div);
+            });
+        };
+
+        const savePairings = () => {
+            document.querySelectorAll('.pairing-entry').forEach(entry => {
+                const traineeId = entry.dataset.traineeId;
+                const trainee = traineeData.find(t => t.id === traineeId);
+                if (!trainee) return;
+
+                let pairing = pairings.find(p => p.id === traineeId);
+                if (!pairing) {
+                    pairing = { id: traineeId, traineeName: trainee.name, region: trainee.region };
+                    pairings.push(pairing);
+                }
+
+                pairing.trainerName = entry.querySelector('.pairing-trainer-select').value || '';
+                pairing.order = entry.querySelector('.pairing-order-input').value.trim() || '';
+                pairing.startDate = entry.querySelector('.pairing-start-date').value || '';
+                pairing.duration = parseInt(entry.querySelector('.pairing-duration-days').value, 10) || 0;
+                pairing.status = pairing.status || 'In Progress';
+            });
+            saveDataToLocal();
+        };
+
+        // --- STEP 4: CALENDAR ---
+        const renderCalendar = () => {
+            const gridBody = document.getElementById('calendar-grid-body');
+            gridBody.innerHTML = '';
+            const month = calendarDate.getMonth();
+            const year = calendarDate.getFullYear();
+            document.getElementById('calendar-month-year').textContent = `${calendarDate.toLocaleString('default', { month: 'long' })} ${year}`;
+            
+            const firstDay = new Date(year, month, 1).getDay();
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+            for (let i = 0; i < firstDay; i++) { gridBody.appendChild(document.createElement('div')); }
+
+            for (let day = 1; day <= daysInMonth; day++) {
+                const dayCell = document.createElement('div');
+                dayCell.className = 'calendar-day border border-gray-700 p-2 bg-gray-800';
+                dayCell.innerHTML = `<div class="font-bold text-right text-gray-400">${day}</div>`;
+                const currentDate = new Date(year, month, day);
+
+                pairings.forEach(p => {
+                    if (!p.startDate) return;
+                    const trainingDates = getTrainingDates(p.startDate, p.duration);
+                    if (trainingDates.some(d => d.getTime() === currentDate.getTime())) {
+                        const eventDiv = document.createElement('div');
+                        eventDiv.className = 'calendar-event text-white';
+                        eventDiv.textContent = p.traineeName;
+                        let hash = 0;
+                        for (let i = 0; i < p.trainerName.length; i++) { hash = p.trainerName.charCodeAt(i) + ((hash << 5) - hash); }
+                        const color = `hsl(${hash % 360}, 70%, 50%)`;
+                        eventDiv.style.backgroundColor = color;
+                        dayCell.appendChild(eventDiv);
+                    }
+                });
+                gridBody.appendChild(dayCell);
+            }
+        };
+        
+        document.getElementById('prev-month-btn').addEventListener('click', () => { calendarDate.setMonth(calendarDate.getMonth() - 1); renderCalendar(); });
+        document.getElementById('next-month-btn').addEventListener('click', () => { calendarDate.setMonth(calendarDate.getMonth() + 1); renderCalendar(); });
+
+        // --- STEP 5: POST GENERATION & EXPORT ---
+        const generatePostsByRegion = () => {
+            const container = document.getElementById('posts-container');
+            container.innerHTML = '';
+            
+            const validPairings = pairings.filter(p => p.trainerName && p.startDate && p.order && p.status === 'In Progress');
+
+            if (validPairings.length === 0) {
+                container.innerHTML = `<p class="text-gray-500 text-center">No active pairings to generate posts for.</p>`;
+                return;
+            }
+
+            const pairingsByRegion = validPairings.reduce((acc, p) => {
+                (acc[p.region] = acc[p.region] || []).push(p);
+                return acc;
+            }, {});
+
+            Object.keys(pairingsByRegion).sort().forEach(region => {
+                const regionPairings = pairingsByRegion[region];
+                const pairingsByTrainer = regionPairings.reduce((acc, p) => {
+                    (acc[p.trainerName] = acc[p.trainerName] || []).push(p);
+                    return acc;
+                }, {});
+
+                let postContent = `${region} Market - Week of ${new Date().toLocaleDateString()}\n\nGood evening,\n\nSee the BWZ field training pairings for next week below.\n\n`;
+                
+                Object.keys(pairingsByTrainer).sort().forEach(trainerName => {
+                    postContent += `${trainerName}\n`;
+                    pairingsByTrainer[trainerName].forEach(p => {
+                        const trainingDates = getTrainingDates(p.startDate, p.duration);
+                        const start = trainingDates[0];
+                        const end = trainingDates[trainingDates.length - 1];
+                        const durationText = trainingDates.length > 1 ? `${start.toLocaleDateString('en-US', { weekday: 'short' })} - ${end.toLocaleDateString('en-US', { weekday: 'short' })}` : start.toLocaleDateString('en-US', { weekday: 'short' });
+                        postContent += ` - ${p.traineeName} - ${durationText} - ${p.order}*\n`;
+                    });
+                    postContent += "\n";
+                });
+                postContent += "Please let me know if you need additional time beyond what is currently scheduled with your trainees.  Thank you everyone! �";
+                
+                const postDiv = document.createElement('div');
+                const uniqueId = `post-output-${region.replace(/\s/g, '')}`;
+                postDiv.innerHTML = `
+                    <h4 class="text-lg font-semibold text-gray-200">${region} Market Post</h4>
+                    <textarea id="${uniqueId}" rows="8" class="w-full p-3 mt-2 border border-gray-600 rounded-lg bg-gray-900 font-mono text-sm" readonly>${postContent}</textarea>
+                    <button data-target="${uniqueId}" class="copy-post-btn mt-2 w-full bg-green-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-green-700 transition-colors">Copy ${region} Post</button>
+                    <span data-feedback="${uniqueId}" class="copy-success-feedback block text-center mt-2 text-green-500 font-semibold hidden">Copied!</span>`;
+                container.appendChild(postDiv);
+            });
+
+            document.querySelectorAll('.copy-post-btn').forEach(button => {
+                button.addEventListener('click', (e) => {
+                    const targetId = e.target.dataset.target;
+                    const textarea = document.getElementById(targetId);
+                    navigator.clipboard.writeText(textarea.value).then(() => {
+                        const feedback = document.querySelector(`[data-feedback="${targetId}"]`);
+                        feedback.classList.remove('hidden');
+                        setTimeout(() => feedback.classList.add('hidden'), 2000);
+                    });
+                });
+            });
+        };
+
+        const getTrainingDates = (startDateStr, duration) => {
+            let dates = [];
+            let currentDate = new Date(startDateStr + 'T00:00:00');
+            while (dates.length < duration) {
+                const dayOfWeek = currentDate.getDay();
+                if (dayOfWeek !== 0 && dayOfWeek !== 6) {
+                    dates.push(new Date(currentDate));
+                }
+                currentDate.setDate(currentDate.getDate() + 1);
+            }
+            return dates;
+        };
+        
+        const generateICSFile = () => {
+            const validPairings = pairings.filter(p => p.startDate);
+            if (validPairings.length === 0) return alert("Please create some pairings with start dates first.");
+
+            let icsContent = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//PairingsGuide//EN'];
+
+            validPairings.forEach(p => {
+                const trainingDates = getTrainingDates(p.startDate, p.duration);
+                const startDate = trainingDates[0];
+                const endDate = trainingDates[trainingDates.length - 1];
+                endDate.setDate(endDate.getDate() + 1);
+
+                const formatDate = (date) => date.toISOString().split('T')[0].replace(/-/g, '');
+                
+                const event = [
+                    'BEGIN:VEVENT',
+                    `UID:${Date.now()}-${p.traineeName.replace(/\s/g, '')}@pairings.guide`,
+                    `DTSTAMP:${new Date().toISOString().replace(/[-:.]/g, '')}Z`,
+                    `DTSTART;VALUE=DATE:${formatDate(startDate)}`,
+                    `DTEND;VALUE=DATE:${formatDate(endDate)}`,
+                    `SUMMARY:Training: ${p.traineeName} w/ ${p.trainerName}`,
+                    `DESCRIPTION:Field training for ${p.traineeName} with ${p.trainerName}.\\nOrder #: ${p.order}`,
+                    'END:VEVENT'
+                ];
+                icsContent.push(...event);
+            });
+
+            icsContent.push('END:VCALENDAR');
+            return icsContent.join('\r\n');
+        };
+
+        downloadIcsBtn.addEventListener('click', () => {
+            const icsData = generateICSFile();
+            if (icsData) {
+                const blob = new Blob([icsData], { type: 'text/calendar' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'training_schedule.ics';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            }
+        });
+
+        // --- STEP 6: DASHBOARD ---
+        const renderDashboard = () => {
+            const container = document.getElementById('dashboard-container');
+            container.innerHTML = '';
+            
+            const activePairings = pairings.filter(p => p.status === 'In Progress');
+            if (pairings.length === 0) {
+                container.innerHTML = `<p class="text-gray-500 text-center">No pairings to display. Get started by adding trainees.</p>`;
+            }
+            if (activePairings.length === 0 && pairings.length > 0) {
+                 container.innerHTML = `<p class="text-gray-400 text-center py-4">All pairings for this group are complete. You can start a new group or view old reports.</p>`;
+            }
+
+            const pairingsByRegion = [...activePairings]
+                .sort((a, b) => a.traineeName.localeCompare(b.traineeName))
+                .reduce((acc, p) => {
+                    (acc[p.region] = acc[p.region] || []).push(p);
+                    return acc;
+                }, {});
+
+            Object.keys(pairingsByRegion).sort().forEach(region => {
+                const regionDiv = document.createElement('div');
+                regionDiv.innerHTML = `<h3 class="text-2xl font-semibold text-yellow-400 border-b-2 border-gray-600 pb-2 mb-4">${region} Market</h3>`;
+                
+                pairingsByRegion[region].forEach(p => {
+                    const pairingCard = document.createElement('div');
+                    pairingCard.className = 'bg-gray-700 p-4 rounded-lg space-y-3';
+                    
+                    if (!p.startDate || !p.trainerName) {
+                        pairingCard.innerHTML = `
+                             <div class="flex justify-between items-center">
+                                <div>
+                                    <p class="font-bold text-lg">${p.traineeName}</p>
+                                    <p class="text-sm text-yellow-400 italic">Pairing needs to be configured.</p>
+                                </div>
+                                <button data-pairing-id="${p.id}" class="configure-pairing-btn bg-indigo-600 text-white px-3 py-1 text-sm rounded-md hover:bg-indigo-700">Configure</button>
+                            </div>`;
+                    } else {
+                        const trainingDates = getTrainingDates(p.startDate, p.duration);
+                        const workDaysPassed = trainingDates.filter(d => new Date(d) < new Date()).length;
+                        const progress = Math.min(100, Math.round((workDaysPassed / p.duration) * 100));
+                        const isFinished = workDaysPassed >= p.duration;
+
+                        let statusUI = `
+                            <div class="flex items-center gap-2">
+                                <button data-pairing-id="${p.id}" class="pass-btn bg-green-500 text-white px-3 py-1 text-sm rounded-md hover:bg-green-600">Pass</button>
+                                <button data-pairing-id="${p.id}" class="fail-btn bg-red-500 text-white px-3 py-1 text-sm rounded-md hover:bg-red-600">Fail</button>
+                            </div>`;
+                        
+                        let actionButtons = `<div class="flex items-center gap-2">`;
+                        actionButtons += `<button data-pairing-id="${p.id}" class="extend-day-btn bg-blue-600 text-white px-3 py-1 text-sm rounded-md hover:bg-blue-700">+ Extend 1 Day</button>`;
+                        if (isFinished) {
+                            actionButtons += `<button data-pairing-id="${p.id}" class="finish-pairing-btn bg-indigo-600 text-white px-3 py-1 text-sm rounded-md hover:bg-indigo-700">Finish & Report</button>`;
+                        }
+                        actionButtons += `</div>`;
+
+
+                        pairingCard.innerHTML = `
+                            <div class="flex justify-between items-start gap-4">
+                                <div>
+                                    <p class="font-bold text-lg">${p.traineeName}</p>
+                                    <p class="text-sm text-gray-400">with ${p.trainerName}</p>
+                                </div>
+                                ${statusUI}
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-300">Progress: ${workDaysPassed} of ${p.duration} days</p>
+                                <div class="w-full bg-gray-600 rounded-full h-2.5 mt-1">
+                                    <div class="bg-green-500 h-2.5 rounded-full" style="width: ${progress}%"></div>
+                                </div>
+                            </div>
+                            <div>
+                                <label class="text-sm font-medium text-gray-300">Notes:</label>
+                                <textarea data-pairing-id="${p.id}" class="notes-input w-full mt-1 p-2 border border-gray-600 rounded-lg bg-gray-800 text-gray-200" rows="2">${p.notes || ''}</textarea>
+                            </div>
+                            <div class="mt-2 flex justify-end">
+                                ${actionButtons}
+                            </div>`;
+                    }
+                    regionDiv.appendChild(pairingCard);
+                });
+                container.appendChild(regionDiv);
+            });
+            
+            const allPairingsFinished = pairings.length > 0 && pairings.every(p => p.status === 'Passed' || p.status === 'Failed');
+            newGroupBtn.classList.toggle('hidden', !allPairingsFinished);
+
+            addDashboardEventListeners();
+        };
+
+        const addDashboardEventListeners = () => {
+             document.getElementById('show-add-trainee-modal-btn')?.addEventListener('click', () => {
+                addTraineeModal.classList.remove('hidden');
+            });
+
+            document.querySelectorAll('.extend-day-btn').forEach(btn => {
+                btn.addEventListener('click', e => {
+                    const pairingId = e.target.dataset.pairingId;
+                    const pairing = pairings.find(p => p.id === pairingId);
+                    if (pairing) {
+                        pairing.duration += 1;
+                        saveDataToLocal();
+                        renderDashboard();
+                        generatePostsByRegion();
+                    }
+                });
+            });
+
+            document.querySelectorAll('.notes-input').forEach(input => {
+                input.addEventListener('change', e => {
+                    const pairingId = e.target.dataset.pairingId;
+                    const pairing = pairings.find(p => p.id === pairingId);
+                    if (pairing) {
+                        pairing.notes = e.target.value;
+                        saveDataToLocal();
+                    }
+                });
+            });
+
+            document.querySelectorAll('.configure-pairing-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    currentStep = 3;
+                    updateGuideUI();
+                    const pairingId = btn.dataset.pairingId;
+                    const element = document.querySelector(`.pairing-entry[data-trainee-id="${pairingId}"]`);
+                    element?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    element?.classList.add('ring-2', 'ring-indigo-500');
+                    setTimeout(() => element?.classList.remove('ring-2', 'ring-indigo-500'), 2500);
+                });
+            });
+
+            const handleStatusChange = (pairingId, newStatus) => {
+                const pairing = pairings.find(p => p.id === pairingId);
+                if (pairing) {
+                    pairing.status = newStatus;
+                    saveDataToLocal();
+                    renderDashboard();
+                }
+            };
+
+            document.querySelectorAll('.pass-btn').forEach(btn => btn.addEventListener('click', e => handleStatusChange(e.target.dataset.pairingId, 'Passed')));
+            document.querySelectorAll('.fail-btn').forEach(btn => btn.addEventListener('click', e => handleStatusChange(e.target.dataset.pairingId, 'Failed')));
+            
+            document.querySelectorAll('.finish-pairing-btn').forEach(btn => btn.addEventListener('click', e => {
+                const pairing = pairings.find(p => p.id === e.target.dataset.pairingId);
+                if (pairing && (pairing.status === 'Passed' || pairing.status === 'Failed')) {
+                    generateAndShowReport(e.target.dataset.pairingId);
+                } else {
+                    alert('Please mark the trainee as "Pass" or "Fail" before finishing the pairing.');
+                }
+            }));
+            
+            // This listener is for the "View Report" button that appears on *completed* cards in the Reports Calendar
+            document.querySelectorAll('.view-report-btn').forEach(btn => btn.addEventListener('click', e => generateAndShowReport(e.target.dataset.pairingId)));
+        };
+
+        // --- MODAL LOGIC ---
+        const handleAddNewTrainee = () => {
+            const firstName = document.getElementById('new-trainee-first-name').value.trim();
+            const lastName = document.getElementById('new-trainee-last-name').value.trim();
+            const market = document.getElementById('new-trainee-market').value.trim();
+
+            if (!firstName || !lastName || !market) {
+                alert('Please fill out all fields.');
+                return;
+            }
+
+            const newTrainee = {
+                name: `${firstName} ${lastName}`,
+                region: market,
+                id: Math.random().toString(36).substr(2, 9)
+            };
+            traineeData.push(newTrainee);
+
+            pairings.push({
+                id: newTrainee.id,
+                traineeName: newTrainee.name,
+                region: newTrainee.region,
+                trainerName: '', order: '', startDate: '',
+                duration: 2,
+                notes: '',
+                status: 'In Progress'
+            });
+
+            extractUniqueRegions();
+            saveDataToLocal();
+            populateTrainersUI();
+            populatePairingUI();
+            renderDashboard();
+            
+            addTraineeModal.classList.add('hidden');
+            document.getElementById('new-trainee-first-name').value = '';
+            document.getElementById('new-trainee-last-name').value = '';
+            document.getElementById('new-trainee-market').value = '';
+        };
+
+        saveNewTraineeBtn.addEventListener('click', handleAddNewTrainee);
+        cancelAddTraineeBtn.addEventListener('click', () => {
+            addTraineeModal.classList.add('hidden');
+        });
+
+        // --- REPORT MODAL LOGIC ---
+        const generateAndShowReport = (pairingId) => {
+            const p = pairings.find(p => p.id === pairingId);
+            if (!p) return;
+
+            const reportContentEl = document.getElementById('report-content');
+            const trainingDates = getTrainingDates(p.startDate, p.duration);
+            const startDate = trainingDates[0]?.toLocaleDateString() || 'N/A';
+            const endDate = trainingDates[trainingDates.length - 1]?.toLocaleDateString() || 'N/A';
+
+            reportContentEl.innerHTML = `
+                <h3 class="text-xl font-bold text-yellow-400">${p.traineeName}</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-2 mt-4">
+                    <p><strong>Status:</strong> <span class="font-semibold ${p.status === 'Passed' ? 'text-green-400' : 'text-red-400'}">${p.status}</span></p>
+                    <p><strong>Trainer:</strong> ${p.trainerName}</p>
+                    <p><strong>Market:</strong> ${p.region}</p>
+                    <p><strong>Order #:</strong> ${p.order}</p>
+                    <p><strong>Start Date:</strong> ${startDate}</p>
+                    <p><strong>End Date:</strong> ${endDate}</p>
+                    <p><strong>Final Duration:</strong> ${p.duration} days</p>
+                </div>
+                <hr class="border-gray-600 my-4">
+                <h4 class="font-semibold text-lg">Notes:</h4>
+                <p class="whitespace-pre-wrap p-2 bg-gray-800 rounded">${p.notes || 'No notes were provided.'}</p>
+            `;
+
+            pairingReportModal.classList.remove('hidden');
+        };
+
+        closeReportModalBtn.addEventListener('click', () => {
+            pairingReportModal.classList.add('hidden');
+        });
+
+        printReportBtn.addEventListener('click', () => {
+            const reportContent = document.getElementById('report-content').innerHTML;
+            const printWindow = window.open('', '', 'height=700,width=900');
+            printWindow.document.write('<html><head><title>Pairing Report</title>');
+            printWindow.document.write('<style>body { font-family: sans-serif; background: #111827; color: #d1d5db; padding: 20px; } h3 { color: #facc15; } hr { border-color: #4b5563; } p { margin-bottom: 8px; } .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; } .whitespace-pre-wrap { white-space: pre-wrap; background: #1f2937; padding: 10px; border-radius: 5px; }</style>');
+            printWindow.document.write('</head><body>');
+            printWindow.document.write(reportContent);
+            printWindow.document.write('</body></html>');
+            printWindow.document.close();
+            printWindow.focus();
+            printWindow.print();
+        });
+
+        // --- REPORTS CALENDAR & NEW GROUP LOGIC ---
+        const renderReportsCalendar = () => {
+            const container = document.getElementById('reports-calendar-content');
+            const completedPairings = pairings.filter(p => p.status === 'Passed' || p.status === 'Failed');
+
+            if (completedPairings.length === 0) {
+                container.innerHTML = `<p class="text-gray-400 text-center">No completed pairing reports found.</p>`;
+                return;
+            }
+            
+            container.innerHTML = '';
+
+            const reportsByRegion = completedPairings.reduce((acc, p) => {
+                (acc[p.region] = acc[p.region] || []).push(p);
+                return acc;
+            }, {});
+
+            Object.keys(reportsByRegion).sort().forEach(region => {
+                const regionDiv = document.createElement('div');
+                regionDiv.innerHTML = `<h3 class="text-xl font-semibold text-purple-300 border-b-2 border-gray-600 pb-2 mb-4">${region} Market</h3>`;
+                
+                const table = document.createElement('table');
+                table.className = 'w-full text-left table-auto';
+                table.innerHTML = `
+                    <thead class="bg-gray-700 text-gray-300">
+                        <tr>
+                            <th class="p-3">Trainee</th>
+                            <th class="p-3">Trainer</th>
+                            <th class="p-3">End Date</th>
+                            <th class="p-3">Status</th>
+                            <th class="p-3 text-right">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>`;
+                
+                const tbody = table.querySelector('tbody');
+                reportsByRegion[region]
+                    .sort((a,b) => new Date(getTrainingDates(b.startDate, b.duration).pop()) - new Date(getTrainingDates(a.startDate, a.duration).pop()))
+                    .forEach(p => {
+                        const endDate = getTrainingDates(p.startDate, p.duration).pop()?.toLocaleDateString() || 'N/A';
+                        const statusColor = p.status === 'Passed' ? 'text-green-400' : 'text-red-400';
+                        const row = document.createElement('tr');
+                        row.className = 'border-b border-gray-700 hover:bg-gray-600/50';
+                        row.innerHTML = `
+                            <td class="p-3">${p.traineeName}</td>
+                            <td class="p-3">${p.trainerName}</td>
+                            <td class="p-3">${endDate}</td>
+                            <td class="p-3 font-bold ${statusColor}">${p.status}</td>
+                            <td class="p-3 text-right">
+                                <button data-pairing-id="${p.id}" class="view-report-btn-calendar bg-gray-500 text-white px-3 py-1 text-sm rounded-md hover:bg-gray-600">View Report</button>
+                            </td>
+                        `;
+                        tbody.appendChild(row);
+                    });
+                
+                regionDiv.appendChild(table);
+                container.appendChild(regionDiv);
+            });
+
+            document.querySelectorAll('.view-report-btn-calendar').forEach(btn => {
+                btn.addEventListener('click', e => {
+                    reportsCalendarModal.classList.add('hidden');
+                    generateAndShowReport(e.target.dataset.pairingId);
+                });
+            });
+        };
+
+        showReportsCalendarBtn.addEventListener('click', () => {
+            renderReportsCalendar();
+            reportsCalendarModal.classList.remove('hidden');
+        });
+
+        closeReportsCalendarBtn.addEventListener('click', () => {
+            reportsCalendarModal.classList.add('hidden');
+        });
+        
+        const startNewGroup = () => {
+            if (!confirm('Are you sure you want to start a new group? This will archive all current trainees and return you to the start. Your trainers and completed reports will be saved.')) {
+                return;
+            }
+            pairings = pairings.filter(p => p.status === 'Passed' || p.status === 'Failed');
+            traineeData = [];
+            currentStep = 1;
+            inputMethod = '';
+            saveDataToLocal();
+            updateGuideUI();
+        };
+
+        // FIXED: Added the missing event listener
+        newGroupBtn.addEventListener('click', startNewGroup);
+
+
+        // --- INITIALIZATION ---
+        window.onload = () => {
+            loadDataFromLocal();
+            updateGuideUI();
+        };
+    </script>
+
+</body>
+</html>
