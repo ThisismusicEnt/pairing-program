@@ -1,0 +1,18 @@
+{
+  "name": "pairing-program",
+  "version": "1.0.0",
+  "description": "The Pairings Guide web app for managing trainer-trainee pairings.",
+  "scripts": {
+    "start": "http-server -c-1 .",
+    "lint": "htmlhint index.html",
+    "test": "npm run lint"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "devDependencies": {
+    "htmlhint": "^1.6.3",
+    "http-server": "^14.1.1"
+  }
+}
