@@ -925,15 +925,20 @@
             });
 
             document.querySelectorAll('.configure-pairing-btn').forEach(btn => {
-                btn.addEventListener('click', () => {
+                btn.addEventListener('click', e => {
                     currentStep = 3;
                     populatePairingUI();
                     updateGuideUI();
-                    const pairingId = btn.dataset.pairingId;
-                    const element = document.querySelector(`.pairing-entry[data-trainee-id="${pairingId}"]`);
-                    element?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                    element?.classList.add('ring-2', 'ring-indigo-500');
-                    setTimeout(() => element?.classList.remove('ring-2', 'ring-indigo-500'), 2500);
+                    const pairingId = e.currentTarget.dataset.pairingId;
+                    // Wait for the DOM to render the pairing entries before querying
+                    requestAnimationFrame(() => {
+                        const element = document.querySelector(`.pairing-entry[data-trainee-id="${pairingId}"]`);
+                        if (element) {
+                            element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            element.classList.add('ring-2', 'ring-indigo-500');
+                            setTimeout(() => element.classList.remove('ring-2', 'ring-indigo-500'), 2500);
+                        }
+                    });
                 });
             });
 
