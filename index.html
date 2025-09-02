@@ -927,6 +927,7 @@
             document.querySelectorAll('.configure-pairing-btn').forEach(btn => {
                 btn.addEventListener('click', () => {
                     currentStep = 3;
+                    populatePairingUI();
                     updateGuideUI();
                     const pairingId = btn.dataset.pairingId;
                     const element = document.querySelector(`.pairing-entry[data-trainee-id="${pairingId}"]`);
