@@ -662,8 +662,10 @@
         };
 
         const getTrainingDates = (startDateStr, duration) => {
+            const startDate = new Date(startDateStr + 'T00:00:00');
+            if (isNaN(startDate) || !duration || duration < 1) return [];
             let dates = [];
-            let currentDate = new Date(startDateStr + 'T00:00:00');
+            let currentDate = startDate;
             while (dates.length < duration) {
                 const dayOfWeek = currentDate.getDay();
                 if (dayOfWeek !== 0 && dayOfWeek !== 6) {
